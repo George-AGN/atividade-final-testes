@@ -6,68 +6,71 @@ import com.example.requisicaoemprestimo.domain.models.ResultadoTesouraria;
 import com.example.requisicaoemprestimo.domain.ports.IAnaliseProxy;
 import com.example.requisicaoemprestimo.domain.ports.ITesourariaProxy;
 import com.example.requisicaoemprestimo.domain.usecases.RequisicaoEmprestimoUseCase;
-import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.BeforeEach;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.Test;
 
 //TODO: Use o mokito para realizar testes TOP-DOWN para criar dublês das interfaces IAnaliseProxy e ITesourariaProxy
 public class RequisicaoEmprestimoUseCaseTests {
 
     //TODO: Setup das classes Mocks e Instância real da classe RequisicaoEmprestimoUseCase
-    IAnaliseProxy iAnaliseProxy = mock(IAnaliseProxy.class);
-    ITesourariaProxy iTesourariaProxy = mock(ITesourariaProxy.class);
-    RequisicaoEmprestimoUseCase requisicaoEmprestimoUseCase = new RequisicaoEmprestimoUseCase(iAnaliseProxy, iTesourariaProxy);
+    private IAnaliseProxy analiseProxy;
+    private ITesourariaProxy tesourariaProxy;
+    private RequisicaoEmprestimoUseCase requisicao;
 
+    @BeforeEach
+    public void Setup(){
+        analiseProxy = mock(IAnaliseProxy.class);
+        tesourariaProxy = mock(ITesourariaProxy.class);
 
+        requisicao = new RequisicaoEmprestimoUseCase(analiseProxy, tesourariaProxy);
+    }
     @Test
     public void test1(){
         //TODO Fazer um teste caminho Feliz (TUDO FUNCIONA BEM)
-        Emprestimo emprestimo;
-        String[] resposta = {"aprovado"};
-        ResultadoAnalise resultadoAnalise = new ResultadoAnalise(true, resposta);
-        when(iAnaliseProxy.solicitarAnaliseDeCredito(any())).thenReturn(resultadoAnalise);
-        ResultadoTesouraria resultadoTesouraria = new ResultadoTesouraria(true, "aprovado");
-        when(iTesourariaProxy.solicitarLiberacaoDaTesouraria(any())).thenReturn(resultadoTesouraria);
+        Emprestimo emprestimo = requisicao.executar(UUID.randomUUID(), 100, 12);
 
-        assertAll(() -> requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2));
-        emprestimo = requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2);
-        assertEquals(true, emprestimo.isEmprestimoFoiAprovado());
+
+        when(analiseProxy.solicitarAnaliseDeCredito(any(Emprestimo.class))).thenReturn(new ResultadoAnalise());
+        when(tesourariaProxy.solicitarLiberacaoDaTesouraria(any(Emprestimo.class))).thenReturn(new ResultadoTesouraria());
+        ResultadoAnalise resultadoAnalise = analiseProxy.solicitarAnaliseDeCredito(emprestimo);
+        ResultadoTesouraria resultadoTesouraria = tesourariaProxy.solicitarLiberacaoDaTesouraria(emprestimo);
+
+        resultadoAnalise.setAprovado(true);
+        resultadoTesouraria.setAprovado(true);
+
+        assertTrue(resultadoAnalise.isAprovado());
+        assertTrue(resultadoTesouraria.isAprovado());
+
     }
 
     @Test
     public void test2(){
         //TODO Fazer um teste caminho INFELIZ IAnaliseProxy retornando uma Análise reprovada
-        Emprestimo emprestimo;
-        String[] resposta = {"reprovado"};
-        ResultadoAnalise resultadoAnalise = new ResultadoAnalise(false, resposta);
-        when(iAnaliseProxy.solicitarAnaliseDeCredito(any())).thenReturn(resultadoAnalise);
-        ResultadoTesouraria resultadoTesouraria = new ResultadoTesouraria(true, "aprovado");
-        when(iTesourariaProxy.solicitarLiberacaoDaTesouraria(any())).thenReturn(resultadoTesouraria);
+        when(analiseProxy.solicitarAnaliseDeCredito(any(Emprestimo.class))).thenReturn(new ResultadoAnalise());
+        when(tesourariaProxy.solicitarLiberacaoDaTesouraria(any(Emprestimo.class))).thenReturn(new ResultadoTesouraria());
 
-        assertAll(() -> requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2));
-        emprestimo = requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2);
-        assertEquals(resultadoAnalise, emprestimo.getResultadoAnalise());
-        assertEquals(false, emprestimo.isEmprestimoFoiAprovado());
+        Emprestimo emprestimo = requisicao.executar(UUID.randomUUID(), 100, 12);
+        ResultadoAnalise resultadoAnalise = analiseProxy.solicitarAnaliseDeCredito(emprestimo);
+        resultadoAnalise.setAprovado(false);
+        assertFalse(resultadoAnalise.isAprovado());
     }
 
     @Test
     public void test3(){
         //TODO Fazer um teste caminho INFELIZ ITesourariaProxy retornando resultado reprovado
-        Emprestimo emprestimo;
-        String[] resposta = {"aprovado"};
-        ResultadoAnalise resultadoAnalise = new ResultadoAnalise(true, resposta);
-        when(iAnaliseProxy.solicitarAnaliseDeCredito(any())).thenReturn(resultadoAnalise);
-        ResultadoTesouraria resultadoTesouraria = new ResultadoTesouraria(false, "reprovado");
-        when(iTesourariaProxy.solicitarLiberacaoDaTesouraria(any())).thenReturn(resultadoTesouraria);
+        when(analiseProxy.solicitarAnaliseDeCredito(any(Emprestimo.class))).thenReturn(new ResultadoAnalise());
+        when(tesourariaProxy.solicitarLiberacaoDaTesouraria(any(Emprestimo.class))).thenReturn(new ResultadoTesouraria());
+        Emprestimo emprestimo = requisicao.executar(UUID.randomUUID(), 100, 12);
 
-        assertAll(() -> requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2));
-        emprestimo = requisicaoEmprestimoUseCase.executar(UUID.randomUUID(), 100.00, 2);
-        assertEquals(resultadoTesouraria, emprestimo.getResultadoTesouraria());
-        assertEquals(false, emprestimo.isEmprestimoFoiAprovado());
+        ResultadoTesouraria resultadoTesouraria = tesourariaProxy.solicitarLiberacaoDaTesouraria(emprestimo);
+
+        resultadoTesouraria.setAprovado(false);
+
+        assertFalse(resultadoTesouraria.isAprovado());
     }
 }
